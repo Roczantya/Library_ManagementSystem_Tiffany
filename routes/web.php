@@ -1,5 +1,8 @@
 <?php
 
+use Illuminate\Foundation\Auth\RegisteredUserControllerController;
+use Illuminate\Foundation\Auth\AuthenticatedSessionController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BookController;
@@ -36,9 +39,6 @@ Route::middleware(['auth', 'role:mahasiswa'])->group(function () {
     Route::get('/mahasiswa/dashboard', [MahasiswaController::class, 'index'])->name('mahasiswa.dashboard');
 });
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
-
 Route::get('/register', [RegisteredUserController::class, 'create'])
     ->middleware('guest')
     ->name('register');
@@ -57,6 +57,24 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
+    Route::get('/email/verify', function () {
+        return view('auth.verify-email');
+    })->middleware('auth')->name('verification.notice');
+    
+    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+        return redirect('/dashboard'); // Ganti dengan rute tujuan setelah verifikasi
+    })->middleware(['auth', 'signed'])->name('verification.verify');
+    
+    Route::post('/email/verification-notification', function (Request $request) {
+        $request->user()->sendEmailVerificationNotification();
+    
+        return back()->with('message', 'Verification link sent!');
+    })->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+
+    Route::get('/dashboard', function () {
+        return view('mahasiswa.dashboard');
+    })->middleware(['auth', 'verified']);
     
 Route::prefix('admin')->group(function () {
     Route::get('login', [AdminController::class, 'showLoginForm'])->name('admin.login');
